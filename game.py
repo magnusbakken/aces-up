@@ -26,7 +26,7 @@ class Game:
             rand.seed(options.seed)
         shuffled_deck = deck[:]
         rand.shuffle(shuffled_deck)
-        self.state = GameState(shuffled_deck, Game.TABLEAU_SIZE)
+        self.state = GameState.from_deck(shuffled_deck, Game.TABLEAU_SIZE)
         self.strategy = strategy
         self.options = options
         self._initialized = True
@@ -71,9 +71,9 @@ class Game:
             round_count += 1
         if self.options.print_options != PrintOptions.NONE:
             print()
-            print('Number of discarded cards: {}'.format(len(self.state.heap)))
+            print('Number of discarded cards: {}'.format(self.state.score))
         self._finished = True
-        return len(self.state.heap)
+        return self.state.score
 
     def make_move(self):
         move = self.strategy.move(self.state)
@@ -89,7 +89,7 @@ class Game:
     def print_tableau(self, label = None, empty_line = True):
         if label:
             print(label)
-        height = len(self.state.tableau[self.state.biggest_pile()])
+        height = len(self.state.tableau[self.state.biggest_pile])
         for row in range(height):
             for idx in range(Game.TABLEAU_SIZE):
                 cell =  self.state.tableau[idx][row] if len(self.state.tableau[idx]) > row else '  '
@@ -103,13 +103,36 @@ class Game:
         print('Heap: {}'.format(', '.join(str(card) for card in self.state.heap)))
 
 class GameState:
-    def __init__(self, deck, size):
-        self.stock = deck
-        self.heap = []
-        self.tableau = []
-        for _ in range(size):
-            self.tableau.append([])
+    def __init__(self, stock, heap, tableau):
+        self.stock = stock
+        self.heap = heap
+        self.tableau = tableau
  
+    @classmethod
+    def from_deck(cls, deck, size):
+        tableau = []
+        for _ in range(size):
+            tableau.append([])
+        return cls(deck, [], tableau)
+    
+    @property
+    def score(self):
+        return len(self.heap)
+
+    @property
+    def biggest_pile(self):
+        max_idx = None
+        max_length = -1
+        for idx in range(Game.TABLEAU_SIZE):
+            length = len(self.tableau[idx])
+            if length > max_length:
+                max_idx = idx
+                max_length = length
+        return max_idx
+
+    def clone(self):
+        return GameState(self.stock[:], self.heap[:], [pile[:] for pile in self.tableau])
+
     def deal(self):
         new_cards = []
         for pile in self.tableau:
@@ -130,16 +153,6 @@ class GameState:
     
     def move(self, from_idx, to_idx):
         self.tableau[to_idx].append(self.tableau[from_idx].pop())
-    
-    def biggest_pile(self):
-        max_idx = None
-        max_length = -1
-        for idx in range(Game.TABLEAU_SIZE):
-            length = len(self.tableau[idx])
-            if length > max_length:
-                max_idx = idx
-                max_length = length
-        return max_idx
 
     def clear_all(self):
         total_clear_count = 0

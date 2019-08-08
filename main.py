@@ -54,3 +54,6 @@ def simulate_random(n, strategy_seed=None):
 
 def simulate_trivial_removal(n):
     simulate(n, strategy.TrivialRemovalStrategy())
+
+def simulate_minimization(n):
+    simulate(n, strategy.MinimizationStrategy())
