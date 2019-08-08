@@ -24,12 +24,9 @@ class Game:
         rand = random.Random()
         if options.seed:
             rand.seed(options.seed)
-        self.stock = deck[:]
-        rand.shuffle(self.stock)
-        self.heap = []
-        self.tableau = []
-        for _ in range(Game.TABLEAU_SIZE):
-            self.tableau.append([])
+        shuffled_deck = deck[:]
+        rand.shuffle(shuffled_deck)
+        self.state = GameState(shuffled_deck, Game.TABLEAU_SIZE)
         self.strategy = strategy
         self.options = options
         self._initialized = True
@@ -41,31 +38,31 @@ class Game:
             raise Exception('Game is finished')
         if self.options.print_options == PrintOptions.VERBOSE:
             print('Starting game...')
-            print('Initial stock: {}'.format(', '.join(str(card) for card in self.stock)))
+            print('Initial stock: {}'.format(', '.join(str(card) for card in self.state.stock)))
             print()
         round_count = 1
-        while len(self.stock) > 0:
-            new_cards = self.deal()
+        while len(self.state.stock) > 0:
+            new_cards = self.state.deal()
             if self.options.print_options != PrintOptions.NONE:
                 if round_count > 1:
                     print()
                 self.print_tableau('Round {}'.format(round_count))
             if self.options.print_options != PrintOptions.NONE:
                 print('Dealt: {}'.format(', '.join(str(card) for card in new_cards)))
-            initial_clear_count = self.clear_all()
+            initial_clear_count = self.state.clear_all()
             if self.options.print_options != PrintOptions.NONE and initial_clear_count > 0:
-                discards = self.heap[-initial_clear_count:]
+                discards = self.state.heap[-initial_clear_count:]
                 print('Discarded: {}'.format(', '.join(str(card) for card in discards)))
             if self.options.print_options == PrintOptions.VERBOSE:
                 self.print_tableau('After initial clear')
                 self.print_internals()
             move_count = 1
-            while self.can_move() and self.make_move():
+            while self.state.can_move() and self.make_move():
                 if self.options.print_options == PrintOptions.VERBOSE:
                     self.print_tableau('After making move {}'.format(move_count), empty_line=False)
-                clear_count = self.clear_all()
+                clear_count = self.state.clear_all()
                 if self.options.print_options != PrintOptions.NONE and clear_count > 0:
-                    discards = self.heap[-clear_count:]
+                    discards = self.state.heap[-clear_count:]
                     print('Discarded: {}'.format(', '.join(str(card) for card in discards)))
                 if self.options.print_options == PrintOptions.VERBOSE:
                     self.print_tableau('Clear after move {}'.format(move_count), empty_line=False)
@@ -74,10 +71,45 @@ class Game:
             round_count += 1
         if self.options.print_options != PrintOptions.NONE:
             print()
-            print('Number of discarded cards: {}'.format(len(self.heap)))
+            print('Number of discarded cards: {}'.format(len(self.state.heap)))
         self._finished = True
-        return len(self.heap)
+        return len(self.state.heap)
 
+    def make_move(self):
+        move = self.strategy.move(self.state)
+        if move:
+            from_idx, to_idx = move
+            if self.options.print_options != PrintOptions.NONE:
+                print('Moved {} to column {}'.format(self.state.peek(from_idx), to_idx+1))
+            self.state.move(from_idx, to_idx)
+            return True
+        else:
+            return False
+    
+    def print_tableau(self, label = None, empty_line = True):
+        if label:
+            print(label)
+        height = len(self.state.tableau[self.state.biggest_pile()])
+        for row in range(height):
+            for idx in range(Game.TABLEAU_SIZE):
+                cell =  self.state.tableau[idx][row] if len(self.state.tableau[idx]) > row else '  '
+                print(cell, end=' ')
+            print()
+        if empty_line:
+            print()
+    
+    def print_internals(self):
+        print('Stock: {}'.format(', '.join(str(card) for card in self.state.stock)))
+        print('Heap: {}'.format(', '.join(str(card) for card in self.state.heap)))
+
+class GameState:
+    def __init__(self, deck, size):
+        self.stock = deck
+        self.heap = []
+        self.tableau = []
+        for _ in range(size):
+            self.tableau.append([])
+ 
     def deal(self):
         new_cards = []
         for pile in self.tableau:
@@ -85,7 +117,7 @@ class Game:
             pile.append(card)
             new_cards.append(card)
         return new_cards
-    
+       
     def draw(self):
         return self.stock.pop()
 
@@ -95,6 +127,9 @@ class Game:
     def peek(self, idx):
         pile = self.tableau[idx]
         return pile[-1] if pile else None
+    
+    def move(self, from_idx, to_idx):
+        self.tableau[to_idx].append(self.tableau[from_idx].pop())
     
     def biggest_pile(self):
         max_idx = None
@@ -145,36 +180,6 @@ class Game:
             if has_empty and has_multi:
                 return True
         return False
-    
-    def make_move(self):
-        move = self.strategy.move(self.stock, self.heap, self.tableau)
-        if move:
-            from_idx, to_idx = move
-            if self.options.print_options != PrintOptions.NONE:
-                print('Moved {} to column {}'.format(self.peek(from_idx), to_idx+1))
-            self.move(from_idx, to_idx)
-            return True
-        else:
-            return False
-    
-    def move(self, from_idx, to_idx):
-        self.tableau[to_idx].append(self.tableau[from_idx].pop())
-    
-    def print_tableau(self, label = None, empty_line = True):
-        if label:
-            print(label)
-        height = len(self.tableau[self.biggest_pile()])
-        for row in range(height):
-            for idx in range(Game.TABLEAU_SIZE):
-                cell =  self.tableau[idx][row] if len(self.tableau[idx]) > row else '  '
-                print(cell, end=' ')
-            print()
-        if empty_line:
-            print()
-    
-    def print_internals(self):
-        print('Stock: {}'.format(', '.join(str(card) for card in self.stock)))
-        print('Heap: {}'.format(', '.join(str(card) for card in self.heap)))
 
 class PrintOptions(enum.Enum):
     NONE = 0
