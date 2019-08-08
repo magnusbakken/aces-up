@@ -4,13 +4,13 @@ import cards
 import game
 import strategy
 
-def play(seed=None, silent=False, verbose=False):
+def play(strat, seed=None, silent=False, verbose=False):
     g = game.Game()
     options = game.GameOptions(
         print_options = game.PrintOptions.NONE if silent else game.PrintOptions.VERBOSE if verbose else game.PrintOptions.SIMPLE,
         seed = seed,
     )
-    g.initialize(cards.DECK, strategy.FirstPossibleStrategy(), options)
+    g.initialize(cards.DECK, strat, options)
     return g.play()
 
 class Stats:
@@ -27,14 +27,14 @@ class Stats:
         print('Times fully solved: {}/{} ({}%)'.format(self.solved_count, self.n, round(100 * self.solved_count / self.n, 2)))
         print('Time taken: {}s'.format(round(self.time_taken, 2)))
 
-def get_stats(n):
+def get_stats(n, strat):
     seeds = list(range(1, n+1))
     result = (0, 0)
     def go():
         total_score = 0
         solved_count = 0
         for seed in seeds:
-            score = play(seed=seed, silent=True)
+            score = play(strat, seed=seed, silent=True)
             total_score += score
             if score == 48:
                 solved_count += 1
@@ -43,5 +43,8 @@ def get_stats(n):
     time_taken = timeit.timeit(go, number=1)
     return Stats(n, seeds, result[0], result[1], time_taken)
 
-def simulate(n):
-    get_stats(n).print()
+def simulate_stupid(n):
+    get_stats(n, strategy.FirstPossibleStrategy()).print()
+
+def simulate_random(n, strategy_seed=None):
+    get_stats(n, strategy.RandomStrategy(strategy_seed)).print()
