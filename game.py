@@ -21,11 +21,8 @@ class Game:
     def initialize(self, deck, strategy, options):
         self._initialized = False
         self._finished = False
-        rand = random.Random()
-        if options.seed:
-            rand.seed(options.seed)
         shuffled_deck = deck[:]
-        rand.shuffle(shuffled_deck)
+        options.rng.shuffle(shuffled_deck)
         self.state = GameState.from_deck(shuffled_deck, Game.TABLEAU_SIZE)
         self.strategy = strategy
         self.options = options
@@ -200,6 +197,6 @@ class PrintOptions(enum.Enum):
     VERBOSE = 2
 
 class GameOptions:
-    def __init__(self, print_options = PrintOptions.SIMPLE, seed = None):
+    def __init__(self, print_options=PrintOptions.SIMPLE, rng=None):
         self.print_options = print_options
-        self.seed = seed
+        self.rng = rng or random.Random()
