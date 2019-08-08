@@ -5,12 +5,9 @@ import cards
 import game
 import strategy
 
-def play(strat, rng=None, silent=False, verbose=False):
+def play(strat, rng, print_options):
     g = game.Game()
-    options = game.GameOptions(
-        print_options = game.PrintOptions.NONE if silent else game.PrintOptions.VERBOSE if verbose else game.PrintOptions.SIMPLE,
-        rng = rng,
-    )
+    options = game.GameOptions(rng=rng, print_options=print_options)
     g.initialize(cards.DECK, strat, options)
     return g.play()
 
@@ -27,16 +24,21 @@ class Stats:
         print('Times fully solved: {}/{} ({}%)'.format(self.solved_count, self.n, round(100 * self.solved_count / self.n, 2)))
         print('Time taken: {}s'.format(round(self.time_taken, 2)))
 
-def get_stats(n, strat, random_shuffles, silent, verbose):
+def get_stats(n, strat, random_shuffles, output):
     result = (0, 0)
     def go():
         total_score = 0
         solved_count = 0
         rng = random.Random()
-        for seed in range(1, n+1):
+        for game_number in range(1, n+1):
             if not random_shuffles:
-                rng.seed(seed)
-            score = play(strat, rng=rng, silent=silent, verbose=verbose)
+                rng.seed(game_number)
+            if output != game.PrintOptions.NONE:
+                print('GAME {}'.format(game_number))
+                print()
+            score = play(strat, rng=rng, print_options=output)
+            if output != game.PrintOptions.NONE:
+                print()
             total_score += score
             if score == 48:
                 solved_count += 1
@@ -45,8 +47,8 @@ def get_stats(n, strat, random_shuffles, silent, verbose):
     time_taken = timeit.timeit(go, number=1)
     return Stats(n, result[0], result[1], time_taken)
 
-def simulate(n, strat, random_shuffles=False, silent=True, verbose=False):
-    get_stats(n, strat, random_shuffles, silent, verbose).print()
+def simulate(n, strat, random_shuffles=False, output='NONE'):
+    get_stats(n, strat, random_shuffles, output).print()
 
 def simulate_stupid(n):
     simulate(n, strategy.FirstPossibleStrategy())
@@ -57,8 +59,8 @@ def simulate_random(n, strategy_seed=None):
 def simulate_trivial_removal(n):
     simulate(n, strategy.TrivialRemovalStrategy())
 
-def simulate_minimization(n):
-    simulate(n, strategy.MinimizationStrategy())
+def simulate_minimization(n, debug=False):
+    simulate(n, strategy.MinimizationStrategy(debug))
 
 STRATEGIES = ['NOOP', 'SIMPLE', 'RANDOM', 'TRIVIAL', 'MINIMIZATION']
 
@@ -69,11 +71,11 @@ def create_strategy(args):
     elif name =='SIMPLE':
         return strategy.FirstPossibleStrategy()
     elif name =='RANDOM':
-        return strategy.RandomStrategy(args.strategy_seed)
+        return strategy.RandomStrategy(seed=args.strategy_seed)
     elif name == 'TRIVIAL':
         return strategy.TrivialRemovalStrategy()
     elif name == 'MINIMIZATION':
-        return strategy.MinimizationStrategy(args.verbose)
+        return strategy.MinimizationStrategy(debug=args.output == 'VERBOSE')
     else:
         raise Exception('Invalid strategy: {}'.format(name))
 
@@ -95,11 +97,11 @@ def parse_cli():
         help='Whether to use random shuffles. If not set, any combination of N and --strategy will give the same result each time.')
     parser.add_argument('--strategy-seed', type=int,
         help='The seed for the RNG used by the strategy function. This is separate from the RNG used to shuffle cards. Currently this is only applicable for the RANDOM strategy.')
-    parser.add_argument('-v', '--verbose', action='store_true',
-        help='Output internal information. Note that enabling this option will cause the program to run much slower.')
+    parser.add_argument('-o', '--output', choices=['NONE', 'BASIC', 'VERBOSE'], default='NONE',
+        help='The level of output information to show. Defaults to NONE. BASIC shows deals, discards and moves. VERBOSE shows even more information. Note that setting a higher level causes the program to run much slower.')
     return parser.parse_args()
 
 if __name__ == '__main__':
     args = parse_cli()
     strat = create_strategy(args)
-    simulate(args.n, strat, args.random_shuffles, verbose=args.verbose)
+    simulate(args.n, strat, args.random_shuffles, output=game.PrintOptions[args.output])

@@ -74,8 +74,8 @@ class TrivialRemovalStrategy(Strategy):
         return (preferred_source_idx, target_idx)
 
 class MinimizationStrategy(Strategy):
-    def __init__(self, verbose=False):
-        self.verbose = verbose
+    def __init__(self, debug=False):
+        self.debug = debug
 
     def move(self, state):
         sources = self.all_sources(state)
@@ -88,11 +88,11 @@ class MinimizationStrategy(Strategy):
         best_score_move = (sources[0], target_idx)
         for source_idx in sources:
             move = (source_idx, target_idx)
-            if self.verbose:
+            if self.debug:
                 print('Considering move: {}->{}'.format(source_idx, target_idx))
             score = self.try_move(state, move, 1)
             if score > best_score:
-                if self.verbose:
+                if self.debug:
                     print('{}->{} is the new best move'.format(source_idx, target_idx))
                 best_score = score
                 best_score_move = move
@@ -103,7 +103,7 @@ class MinimizationStrategy(Strategy):
         state.move(*move)
         state.clear_all()
         best_score = state.score
-        if self.verbose:
+        if self.debug:
             print('{}Best score at this point is {}'.format(' ' * 2 * depth, best_score))
         sources = self.all_sources(state)
         target_idx = self.first_target(state)
@@ -111,15 +111,15 @@ class MinimizationStrategy(Strategy):
             return best_score
         for source_idx in sources:
             move = (source_idx, target_idx)
-            if self.verbose:
+            if self.debug:
                 print('{}Considering depth {} move: {}->{}'.format(' ' * 2 * depth, depth, source_idx, target_idx))
             score = self.try_move(state, move, depth+1)
-            if self.verbose:
+            if self.debug:
                 print('{}{}->{} at depth {} would yield a score of {}'.format(' ' * 2 * depth, source_idx, target_idx, depth, score))
             if score > best_score:
-                if self.verbose:
+                if self.debug:
                     print('{}...which is better than the current best score of {}'.format(' ' * 2 * depth, best_score))
                 best_score = score
-            elif self.verbose:
+            elif self.debug:
                 print('{}...but the current best score is {}'.format(' ' * 2 * depth, best_score))
         return best_score

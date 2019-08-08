@@ -39,36 +39,38 @@ class Game:
             print()
         round_count = 1
         while len(self.state.stock) > 0:
-            new_cards = self.state.deal()
             if self.options.print_options != PrintOptions.NONE:
                 if round_count > 1:
                     print()
-                self.print_tableau('Round {}'.format(round_count))
+                print('Round {}'.format(round_count))
+            new_cards = self.state.deal()
             if self.options.print_options != PrintOptions.NONE:
-                print('Dealt: {}'.format(', '.join(str(card) for card in new_cards)))
+                print('Dealing: {}'.format(', '.join(str(card) for card in new_cards)))
+            if self.options.print_options != PrintOptions.NONE:
+                print()
+                self.print_tableau()
             initial_clear_count = self.state.clear_all()
             if self.options.print_options != PrintOptions.NONE and initial_clear_count > 0:
                 discards = self.state.heap[-initial_clear_count:]
                 print('Discarded: {}'.format(', '.join(str(card) for card in discards)))
-            if self.options.print_options == PrintOptions.VERBOSE:
-                self.print_tableau('After initial clear')
-                self.print_internals()
             move_count = 1
             while self.state.can_move() and self.make_move():
-                if self.options.print_options == PrintOptions.VERBOSE:
-                    self.print_tableau('After making move {}'.format(move_count), empty_line=False)
                 clear_count = self.state.clear_all()
                 if self.options.print_options != PrintOptions.NONE and clear_count > 0:
                     discards = self.state.heap[-clear_count:]
                     print('Discarded: {}'.format(', '.join(str(card) for card in discards)))
-                if self.options.print_options == PrintOptions.VERBOSE:
-                    self.print_tableau('Clear after move {}'.format(move_count), empty_line=False)
-                    self.print_internals()
                 move_count += 1
+            if self.options.print_options != PrintOptions.NONE:
+                print()
+                self.print_tableau(empty_line=False)
+            if self.options.print_options == PrintOptions.VERBOSE:
+                print()
+                self.print_internals()
             round_count += 1
         if self.options.print_options != PrintOptions.NONE:
             print()
             print('Number of discarded cards: {}'.format(self.state.score))
+            print()
         self._finished = True
         return self.state.score
 
@@ -193,10 +195,10 @@ class GameState:
 
 class PrintOptions(enum.Enum):
     NONE = 0
-    SIMPLE = 1
+    BASIC = 1
     VERBOSE = 2
 
 class GameOptions:
-    def __init__(self, print_options=PrintOptions.SIMPLE, rng=None):
-        self.print_options = print_options
+    def __init__(self, rng=None, print_options=PrintOptions.BASIC):
         self.rng = rng or random.Random()
+        self.print_options = print_options
