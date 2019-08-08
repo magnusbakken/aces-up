@@ -43,8 +43,14 @@ def get_stats(n, strat):
     time_taken = timeit.timeit(go, number=1)
     return Stats(n, seeds, result[0], result[1], time_taken)
 
+def simulate(n, strat):
+    get_stats(n, strat).print()
+
 def simulate_stupid(n):
-    get_stats(n, strategy.FirstPossibleStrategy()).print()
+    simulate(n, strategy.FirstPossibleStrategy())
 
 def simulate_random(n, strategy_seed=None):
-    get_stats(n, strategy.RandomStrategy(strategy_seed)).print()
+    simulate(n, strategy.RandomStrategy(strategy_seed))
+
+def simulate_trivial_removal(n):
+    simulate(n, strategy.TrivialRemovalStrategy())

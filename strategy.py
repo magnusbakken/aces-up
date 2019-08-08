@@ -57,3 +57,18 @@ class RandomStrategy(Strategy):
             source_idx = self.rand.choice(sources)
             target_idx = self.rand.choice(targets)
             return (source_idx, target_idx)
+
+class TrivialRemovalStrategy(Strategy):
+    def move(self, stock, heap, tableau):
+        sources = self.all_sources(tableau)
+        target_idx = self.first_target(tableau)
+        if len(sources) == 0 or target_idx is None:
+            return None
+        if len(sources) == 1:
+            return (sources[0], target_idx)
+        preferred_source_idx = sources[0]
+        for source_idx in sources:
+            if tableau[source_idx][-2].beats(tableau[source_idx][-1]):
+                preferred_source_idx = source_idx
+                break
+        return (preferred_source_idx, target_idx)
